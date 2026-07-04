@@ -5,7 +5,6 @@
   const setup = document.getElementById('setup');
   const loader = document.getElementById('loader');
   const frame = document.getElementById('chain-watcher');
-  const directLink = document.getElementById('direct-link');
   document.getElementById('pages-origin').textContent = window.location.origin;
 
   if (!validAppUrl) {
@@ -15,8 +14,6 @@
   }
 
   frame.src = appUrl;
-  directLink.href = appUrl;
   frame.classList.remove('hidden');
-  directLink.classList.remove('hidden');
   frame.addEventListener('load', () => loader.classList.add('hidden'), { once: true });
 })();
