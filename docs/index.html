@@ -7,51 +7,148 @@
     <meta name="description" content="Unbroken Valkyries Chain Watcher">
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; base-uri 'none'; object-src 'none'; frame-src https://script.google.com https://*.googleusercontent.com; connect-src 'self' https://script.google.com https://*.googleusercontent.com; style-src 'self'; script-src 'self'; img-src 'self' data:;"
+      content="default-src 'self'; base-uri 'none'; object-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; form-action 'none'; frame-ancestors 'none';"
     >
     <title>Unbroken Valkyries — Chain Watcher</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css">
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Segoe UI", Tahoma, ui-sans-serif, system-ui, sans-serif;
+        background: #080b0d;
+        color: #f0eadc;
+      }
+
+      * { box-sizing: border-box; }
+
+      html,
+      body {
+        width: 100%;
+        min-width: 320px;
+        min-height: 100%;
+        margin: 0;
+        background:
+          radial-gradient(circle at 18% 0, rgba(198, 154, 82, 0.18), transparent 34rem),
+          radial-gradient(circle at 90% 5%, rgba(143, 200, 214, 0.12), transparent 30rem),
+          #080b0d;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      .setup-card {
+        width: min(650px, 100%);
+        padding: 30px;
+        border: 1px solid rgba(198, 154, 82, 0.36);
+        border-radius: 8px 22px;
+        background: rgba(17, 23, 27, 0.96);
+        box-shadow: 0 28px 80px rgba(0, 0, 0, 0.56);
+      }
+
+      .monogram {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        margin-bottom: 22px;
+        border: 1px solid rgba(198, 154, 82, 0.5);
+        border-radius: 6px 16px;
+        background: rgba(198, 154, 82, 0.1);
+        color: #e5c17c;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: #c69a52;
+        font-size: 0.7rem;
+        font-weight: 850;
+        letter-spacing: 0.17em;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        color: #e5c17c;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(1.8rem, 6vw, 3rem);
+        line-height: 1;
+      }
+
+      p {
+        color: #a7ada9;
+        line-height: 1.62;
+      }
+
+      .small { font-size: 0.9rem; }
+
+      code {
+        display: block;
+        margin-top: 10px;
+        padding: 12px;
+        border: 1px solid rgba(143, 200, 214, 0.16);
+        border-radius: 5px;
+        background: #0a0f11;
+        color: #8fc8d6;
+        overflow-wrap: anywhere;
+      }
+
+      .button-link {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 0 16px;
+        border: 1px solid rgba(198, 154, 82, 0.52);
+        border-radius: 5px 12px;
+        background: rgba(198, 154, 82, 0.12);
+        color: #e5c17c;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      .button-link:hover {
+        border-color: rgba(229, 193, 124, 0.8);
+        background: rgba(198, 154, 82, 0.2);
+      }
+    </style>
   </head>
   <body>
-    <main id="setup" class="setup-card hidden" aria-live="polite">
+    <main class="setup-card" aria-live="polite">
       <div class="monogram" aria-hidden="true">UV</div>
       <p class="eyebrow">CHAIN WATCHER</p>
-      <h1>GitHub Pages setup required</h1>
-      <p>Replace <code>PASTE_APPS_SCRIPT_EXEC_URL_HERE</code> in <code>docs/config.js</code> with the deployed Apps Script <code>/exec</code> URL.</p>
-      <p>In Chain Watcher Admin settings, set <strong>GitHub Pages origin</strong> to:</p>
-      <code id="pages-origin" class="origin"></code>
+      <h1>Opening Chain Watcher…</h1>
+      <p id="status">Redirecting to the live Apps Script app.</p>
+      <p class="small">This page intentionally does not use an iframe. Google is returning <code style="display:inline;margin:0;padding:2px 6px;">X-Frame-Options: sameorigin</code> for the Apps Script URL, so the browser must open the app as a top-level page.</p>
+      <p><a id="open-direct" class="button-link" href="#" target="_self" rel="noopener noreferrer">Open Chain Watcher</a></p>
+      <p>Configured Apps Script URL:</p>
+      <code id="configured-app-url"></code>
     </main>
 
-    <main id="frame-error" class="setup-card hidden" aria-live="polite">
-      <div class="monogram" aria-hidden="true">UV</div>
-      <p class="eyebrow">CHAIN WATCHER</p>
-      <h1>Apps Script iframe blocked</h1>
-      <p>The GitHub wrapper is correct, but Google did not allow the Apps Script page to load inside the iframe.</p>
-      <p>Most common causes: the Apps Script web app deployment was not updated to a new version, access is not set to <strong>Anyone</strong>, or GitHub still points to an old <code>/exec</code> deployment URL.</p>
-      <p>
-        <a id="open-direct" class="button-link" href="#" target="_blank" rel="noopener noreferrer">Open Chain Watcher directly</a>
-      </p>
-      <p>Current configured Apps Script URL:</p>
-      <code id="configured-app-url" class="origin"></code>
-    </main>
+    <script>
+      (() => {
+        const appUrl = 'https://script.google.com/macros/s/AKfycbwfX3vgrqPHVrzangE3W8W_u2u5Ckyx2r52Q_gwT2Mq26QreK_EZitYB0SjsJa8OXwP/exec';
+        const validAppUrl = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(?:[?#].*)?$/.test(appUrl);
+        const status = document.getElementById('status');
+        const configuredAppUrl = document.getElementById('configured-app-url');
+        const openDirect = document.getElementById('open-direct');
 
+        if (configuredAppUrl) configuredAppUrl.textContent = appUrl;
+        if (openDirect) openDirect.href = appUrl;
 
-    <div id="loader" class="loader" role="status">
-      <div class="monogram" aria-hidden="true">UV</div>
-      <span>Opening Chain Watcher…</span>
-    </div>
+        if (!validAppUrl) {
+          if (status) status.textContent = 'Setup required: index.html does not contain a valid Apps Script /exec URL.';
+          if (openDirect) openDirect.removeAttribute('href');
+          return;
+        }
 
-    <iframe
-      id="chain-watcher"
-      class="app-frame hidden"
-      title="Unbroken Valkyries Chain Watcher"
-      referrerpolicy="strict-origin-when-cross-origin"
-      allow="clipboard-write"
-      scrolling="no"
-    ></iframe>
-
-    <script src="config.js"></script>
-    <script src="app.js"></script>
+        window.setTimeout(() => {
+          window.location.replace(appUrl);
+        }, 500);
+      })();
+    </script>
   </body>
 </html>
