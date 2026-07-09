@@ -9,22 +9,16 @@
   const frame = document.getElementById('chain-watcher');
   const pagesOrigin = document.getElementById('pages-origin');
   const configuredAppUrl = document.getElementById('configured-app-url');
+  const configuredAppUrlError = document.getElementById('configured-app-url-error');
   const openDirect = document.getElementById('open-direct');
 
   let receivedHeightMessage = false;
   let iframeLoaded = false;
 
-  if (pagesOrigin) {
-    pagesOrigin.textContent = window.location.origin;
-  }
-
-  if (configuredAppUrl) {
-    configuredAppUrl.textContent = appUrl || '(missing)';
-  }
-
-  if (openDirect) {
-    openDirect.href = appUrl || '#';
-  }
+  if (pagesOrigin) pagesOrigin.textContent = window.location.origin;
+  if (configuredAppUrl) configuredAppUrl.textContent = appUrl || '(missing)';
+  if (configuredAppUrlError) configuredAppUrlError.textContent = appUrl || '(missing)';
+  if (openDirect) openDirect.href = appUrl || '#';
 
   if (!setup || !loader || !frame) {
     console.error('Chain Watcher Pages wrapper: required elements are missing.');
@@ -56,7 +50,6 @@
 
   function setFrameHeight(height) {
     const safeHeight = Number(height);
-
     if (!Number.isFinite(safeHeight) || safeHeight < 400) return;
 
     // Add a small buffer so desktop browsers do not clip the bottom edge.
@@ -74,6 +67,7 @@
     const url = new URL(rawUrl);
     url.searchParams.set('cwWrapper', 'github-pages');
     url.searchParams.set('cwEmbedOrigin', window.location.origin);
+    url.searchParams.set('cwCacheBust', String(Date.now()));
     return url.toString();
   }
 
