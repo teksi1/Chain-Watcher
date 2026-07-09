@@ -7,7 +7,7 @@
     <meta name="description" content="Unbroken Valkyries Chain Watcher">
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; base-uri 'none'; object-src 'none'; frame-src https://script.google.com https://*.googleusercontent.com; style-src 'self'; script-src 'self'; img-src 'self' data:;"
+      content="default-src 'self'; base-uri 'none'; object-src 'none'; frame-src https://script.google.com https://*.googleusercontent.com; connect-src 'self' https://script.google.com https://*.googleusercontent.com; style-src 'self'; script-src 'self'; img-src 'self' data:;"
     >
     <title>Unbroken Valkyries — Chain Watcher</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -22,6 +22,20 @@
       <p>In Chain Watcher Admin settings, set <strong>GitHub Pages origin</strong> to:</p>
       <code id="pages-origin" class="origin"></code>
     </main>
+
+    <main id="frame-error" class="setup-card hidden" aria-live="polite">
+      <div class="monogram" aria-hidden="true">UV</div>
+      <p class="eyebrow">CHAIN WATCHER</p>
+      <h1>Apps Script iframe blocked</h1>
+      <p>The GitHub wrapper is correct, but Google did not allow the Apps Script page to load inside the iframe.</p>
+      <p>Most common causes: the Apps Script web app deployment was not updated to a new version, access is not set to <strong>Anyone</strong>, or GitHub still points to an old <code>/exec</code> deployment URL.</p>
+      <p>
+        <a id="open-direct" class="button-link" href="#" target="_blank" rel="noopener noreferrer">Open Chain Watcher directly</a>
+      </p>
+      <p>Current configured Apps Script URL:</p>
+      <code id="configured-app-url" class="origin"></code>
+    </main>
+
 
     <div id="loader" class="loader" role="status">
       <div class="monogram" aria-hidden="true">UV</div>
