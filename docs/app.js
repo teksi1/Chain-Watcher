@@ -22,6 +22,8 @@
       autoRefreshTimer: null,
       loadingWatchdogTimer: null,
       layoutPublishTimer: null,
+      logSearchTimer: null,
+      activityLog: null,
       coverageFilter: 'future',
       memberStatusFilter: 'all',
       initialHashScrolled: false,
@@ -102,6 +104,10 @@
       on('admin-report-sheet', 'click', createEventReportSheet);
       on('admin-export-csv', 'click', downloadEventCsv);
       on('admin-add-member', 'click', addManualMember);
+      on('admin-refresh-logs', 'click', () => loadActivityLog(true));
+      on('log-category-filter', 'change', () => loadActivityLog(true));
+      on('log-outcome-filter', 'change', () => loadActivityLog(true));
+      on('log-search', 'input', queueActivityLogRefresh);
       on('manual-member-id', 'keydown', (event) => {
         if (event.key === 'Enter') addManualMember();
       });
@@ -906,6 +912,120 @@
         : 'The Torn API key has not been configured.';
       $('admin-export-result').textContent = '';
       renderManualMembers(admin.manualMembers || []);
+      loadActivityLog(false);
+    }
+
+    function queueActivityLogRefresh() {
+      window.clearTimeout(state.logSearchTimer);
+      state.logSearchTimer = window.setTimeout(() => loadActivityLog(false), 300);
+    }
+
+    function readLogFilters() {
+      return {
+        category: $('log-category-filter').value,
+        outcome: $('log-outcome-filter').value,
+        query: $('log-search').value.trim(),
+        limit: 50,
+        scanLimit: 1500,
+      };
+    }
+
+    async function loadActivityLog(showSpinner) {
+      if (!state.adminSecret) return;
+      if (showSpinner) setLoading(true);
+      try {
+        const result = await server('adminGetLogs', readLogFilters(), state.adminSecret);
+        state.activityLog = result;
+        renderActivityLog(result);
+      } catch (error) {
+        const summary = $('activity-log-summary');
+        const list = $('activity-log-list');
+        if (summary) summary.textContent = error.message || String(error);
+        if (list) list.innerHTML = '';
+        if (showSpinner) showError(error);
+      } finally {
+        if (showSpinner) setLoading(false);
+      }
+    }
+
+    function renderActivityLog(result) {
+      const summary = $('activity-log-summary');
+      const list = $('activity-log-list');
+      if (!summary || !list) return;
+
+      const entries = result && Array.isArray(result.entries) ? result.entries : [];
+      if (!entries.length) {
+        summary.textContent = result && result.scanned
+          ? `No log entries matched the current filters. Scanned ${result.scanned} recent row(s).`
+          : 'No log entries yet.';
+        list.innerHTML = '';
+        return;
+      }
+
+      const more = result.hasMore ? ` Showing latest ${entries.length}.` : '';
+      summary.textContent = `${result.totalMatched || entries.length} matching log entr${(result.totalMatched || entries.length) === 1 ? 'y' : 'ies'} from ${result.scanned || entries.length} scanned row(s).${more}`;
+      list.innerHTML = entries.map(renderLogEntry).join('');
+    }
+
+    function renderLogEntry(entry) {
+      const level = String(entry.level || 'INFO').toLowerCase();
+      const outcome = String(entry.outcome || 'success').toLowerCase();
+      const actor = entry.actorName
+        ? `${escapeHtml(entry.actorName)}${entry.actorId ? ` <small>[${escapeHtml(entry.actorId)}]</small>` : ''}`
+        : 'System';
+      const requestId = entry.requestId ? `<span>Request: <code>${escapeHtml(entry.requestId)}</code></span>` : '';
+      const changed = Number(entry.changedSlotCount || (entry.changes ? entry.changes.length : 0));
+      const changeSummary = changed
+        ? `<strong>${changed}</strong> changed slot${changed === 1 ? '' : 's'}`
+        : '';
+      const scheduleDetails = entry.changes && entry.changes.length
+        ? renderScheduleChanges(entry.changes)
+        : '';
+
+      return `
+        <article class="activity-log-entry ${escapeAttr(level)} ${escapeAttr(outcome)}">
+          <div class="activity-log-entry-main">
+            <div>
+              <div class="activity-log-meta">
+                <span>${escapeHtml(entry.timestampTct || entry.timestampUtc || 'Unknown time')}</span>
+                <span>${escapeHtml(entry.category || 'general')}</span>
+                <span>${escapeHtml(entry.action || 'event')}</span>
+              </div>
+              <h4>${actor}</h4>
+              <p>${escapeHtml(entry.message || 'No message')}</p>
+            </div>
+            <div class="activity-log-badges">
+              <span class="log-badge ${escapeAttr(outcome)}">${escapeHtml(entry.outcome || 'success')}</span>
+              <span class="log-badge">${escapeHtml(entry.source || 'backend')}</span>
+            </div>
+          </div>
+          <div class="activity-log-foot">
+            ${changeSummary ? `<span>${changeSummary}</span>` : ''}
+            ${entry.submittedSlotCount ? `<span>${escapeHtml(entry.submittedSlotCount)} submitted slot(s)</span>` : ''}
+            ${requestId}
+          </div>
+          ${scheduleDetails}
+        </article>
+      `;
+    }
+
+    function renderScheduleChanges(changes) {
+      const visible = changes.slice(0, 120);
+      const hiddenCount = Math.max(0, changes.length - visible.length);
+      return `
+        <details class="log-change-details">
+          <summary>${changes.length} slot change${changes.length === 1 ? '' : 's'}</summary>
+          <div class="log-change-list">
+            ${visible.map((change) => `
+              <div class="log-change-row">
+                <span>${escapeHtml(change.slotTct || change.slotUtc || 'Unknown slot')}</span>
+                <strong>${escapeHtml(change.from || 'Not set')} &rarr; ${escapeHtml(change.to || 'Not set')}</strong>
+              </div>
+            `).join('')}
+            ${hiddenCount ? `<p class="hint">+${hiddenCount} more changes hidden in this view.</p>` : ''}
+          </div>
+        </details>
+      `;
     }
 
     function renderManualMembers(members) {
