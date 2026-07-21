@@ -58,13 +58,17 @@
     function bindEvents() {
       bindInternalNavigation();
 
-      const resourcesMenu = document.querySelector('.nav-resources');
-      if (resourcesMenu) {
-        resourcesMenu.querySelectorAll('a').forEach((link) => {
-          link.addEventListener('click', () => resourcesMenu.removeAttribute('open'));
+      const resourceMenus = Array.from(document.querySelectorAll('.nav-resources'));
+      if (resourceMenus.length) {
+        resourceMenus.forEach((menu) => {
+          menu.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => menu.removeAttribute('open'));
+          });
         });
         document.addEventListener('click', (event) => {
-          if (resourcesMenu.open && !resourcesMenu.contains(event.target)) resourcesMenu.removeAttribute('open');
+          resourceMenus.forEach((menu) => {
+            if (menu.open && !menu.contains(event.target)) menu.removeAttribute('open');
+          });
         });
       } else {
         console.warn('Chain Watcher: missing .nav-resources menu');
