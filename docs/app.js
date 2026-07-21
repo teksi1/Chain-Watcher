@@ -50,6 +50,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('cw-js-ready');
+      loadWarReports();
       bindEvents();
       bindLayoutPublisher();
       loadData(true).finally(scheduleAutoRefresh);
@@ -60,12 +61,12 @@
 
       const resourceMenus = Array.from(document.querySelectorAll('.nav-resources'));
       if (resourceMenus.length) {
-        resourceMenus.forEach((menu) => {
-          menu.querySelectorAll('a').forEach((link) => {
-            link.addEventListener('click', () => menu.removeAttribute('open'));
-          });
-        });
         document.addEventListener('click', (event) => {
+          const menuLink = event.target.closest('.nav-resource-menu a');
+          if (menuLink) {
+            const linkMenu = menuLink.closest('.nav-resources');
+            if (linkMenu) linkMenu.removeAttribute('open');
+          }
           resourceMenus.forEach((menu) => {
             if (menu.open && !menu.contains(event.target)) menu.removeAttribute('open');
           });
@@ -139,6 +140,61 @@
         if (commandButton.dataset.commandAction === 'next-gap') jumpToNextGap();
         if (commandButton.dataset.commandAction === 'coverage') focusCoverageBoard();
       });
+      }
+
+    async function loadWarReports() {
+      const menu = $('war-report-menu');
+      if (!menu) return;
+      try {
+        const response = await fetch('reports.json', { cache: 'no-cache' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const reports = await response.json();
+        if (!Array.isArray(reports)) throw new Error('reports.json must contain an array.');
+        const validReports = reports.map(normalizeWarReport).filter(Boolean);
+        if (!validReports.length) return;
+        menu.replaceChildren(...validReports.map(createWarReportLink));
+      } catch (error) {
+        console.warn('Chain Watcher: could not load WAR reports list.', error);
+      }
+    }
+
+    function normalizeWarReport(report) {
+      if (!report || typeof report !== 'object') return null;
+      const title = String(report.title || '').trim();
+      const file = String(report.file || '').trim();
+      if (!title || !isSafeReportPath(file)) return null;
+      return {
+        title,
+        file,
+        description: String(report.description || formatWarReportDate(report.date) || 'War matchup report').trim(),
+      };
+    }
+
+    function isSafeReportPath(file) {
+      return /^reports\/[A-Za-z0-9._-]+\.html$/.test(file);
+    }
+
+    function formatWarReportDate(value) {
+      const text = String(value || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return '';
+      const date = new Date(`${text}T00:00:00Z`);
+      if (Number.isNaN(date.getTime())) return '';
+      return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    function createWarReportLink(report) {
+      const link = document.createElement('a');
+      link.href = report.file;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+
+      const title = document.createElement('strong');
+      title.textContent = report.title;
+      const description = document.createElement('span');
+      description.textContent = report.description;
+
+      link.append(title, description);
+      return link;
     }
 
     function scheduleAutoRefresh() {
